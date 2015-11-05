@@ -14,18 +14,27 @@ namespace Libnimbus
         {
             HtmlDocument doc = new HtmlDocument();
             doc.LoadHtml(html);
-            return doc.DocumentNode
-                .SelectNodes(@"a[class=""yt-uix-tile-link""]")
-                .Where((node) => {
-                    var href = node.Attributes["href"];
-                    return href != null && href.Value.Contains("/watch?v=");
-                }).Select((node) => {
-                    return new Hyperlink
-                    {
-                        Href = new Uri(node.Attributes["href"].Value),
-                        Text = node.InnerText               
-                    };
-                });
+            var nodes = doc.DocumentNode.SelectNodes(@"//a");
+            var watchLinkNodes = nodes.Where((node) =>
+            {
+                var href = node.Attributes["href"];
+                var htmlClass = node.Attributes["class"];
+                return (
+                    href != null &&
+                    href.Value.Contains("/watch?v=") &&
+                    htmlClass != null &&
+                    htmlClass.Value.Contains("yt-uix-tile-link")
+                );
+            });
+            var links = watchLinkNodes.Select((node) =>
+            {
+                return new Hyperlink
+                {
+                    Href = node.Attributes["href"].Value,
+                    Text = node.InnerText
+                };
+            });
+            return links;
         }
 
         public async Task<string> SearchVideos(string query)
@@ -35,7 +44,7 @@ namespace Libnimbus
                     Path = "results",
                     Query = string.Format("search_query={}", query)
                 }.Uri;
-            
+
             HttpClient client = new HttpClient();
             return await client.GetStringAsync(uri);
         }
